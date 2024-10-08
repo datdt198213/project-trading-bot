@@ -58,18 +58,36 @@ bot.on('message', (msg) => {
 // Aftermath API
 
 const fullnodeEndpoint = "https://fullnode.mainnet.sui.io";
+const pools = new Aftermath("TESTNET").Pools();
+async function main() {
+    // single pool
+  // const pool = await pools.getPool({
+  //   objectId: "0xefe170ec0be4d762196bedecd7a065816576198a6527c99282a2551aaa7da38c",
+  // });
+  // console.log(`Hello`);
+  // // multiple pools
+  // const somePools = await pools.getPools({
+  //   objectIds: ["0x1..", "0x2.."],
+  // });
 
-const addresses: ConfigAddresses = {pools : };
-const afApi = new AftermathApi(
-	new SuiClient({
-		transport: new SuiHTTPTransport({
-			url: fullnodeEndpoint,
-		}),
-	}),
-	addresses,
-	new IndexerCaller("MAINNET"), // "MAINNET" | "TESTNET" | "DEVNET"
-);
-const afSdk = new Aftermath("MAINNET")
+  // all pools
+  const allPools = await pools.getAllPools();
+  console.log(`All pools ${allPools}`);
+}
+
+main()
+
+// const addresses: ConfigAddresses = {pools : ""};
+// const afApi = new AftermathApi(
+// 	new SuiClient({
+// 		transport: new SuiHTTPTransport({
+// 			url: fullnodeEndpoint,
+// 		}),
+// 	}),
+// 	addresses,
+// 	new IndexerCaller("MAINNET"), // "MAINNET" | "TESTNET" | "DEVNET"
+// );
+// const afSdk = new Aftermath("MAINNET")
 
 // const afApi = new AftermathApi(
 // 	new SuiClient({
