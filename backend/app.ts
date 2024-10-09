@@ -39,34 +39,6 @@ bot.onText(/\/start/, async (msg: Message) => {
     );
 });
 
-// New chat members
-bot.on("new_chat_members", async (msg: Message) => {
-    const newMembers = msg.new_chat_members;
-
-    if (newMembers) {
-        for (const member of newMembers) {
-            const username = member.username || member.first_name || "New user";
-
-            // create wallet for new members
-            const keypair = await createSuiWallet();
-            const walletAddress = keypair.toSuiAddress();
-
-            // Send welcome message with wallet address
-            await bot.sendMessage(
-                msg.chat.id,
-                `Welcome FISH BOT, your wallet is ${walletAddress}`
-            );
-
-            // Send message with menu buttons
-            await bot.sendMessage(
-                msg.chat.id,
-                "What do you want to do with the bot?",
-                general_menu_buttons
-            );
-        }
-    }
-});
-
 // Button events
 bot.on("callback_query", async (callbackQuery: CallbackQuery) => {
     const message = callbackQuery.message;
