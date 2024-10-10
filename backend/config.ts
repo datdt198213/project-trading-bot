@@ -19,6 +19,8 @@ export const db = {
 };
 
 export const bot_token = process.env.BOT_TOKEN || ''
+export const url_catfish = process.env.URL_CATFISH || ''
+export const suiscan_account= process.env.SUISCAN_ACCOUNT || ''
 
 // export const corsUrl = process.env.CORS_URL;
 
