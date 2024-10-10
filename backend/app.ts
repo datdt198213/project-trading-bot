@@ -6,6 +6,8 @@ import { Keypair } from "@mysten/sui/dist/cjs/cryptography";
 import { bot_token } from "./config";
 import { swapToken } from "./services/sui/aftermath";
 import { createSuiWallet } from "./services/sui/utils";
+import UserRepo from "./database/repository/UserRepo";
+import User, { UserModel } from "./database/model/User";
 
 import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
 import { convertSuiToUSD } from "./services/sui/price";
@@ -54,7 +56,7 @@ const wallet_menu_buttons = {
     reply_markup: {
         inline_keyboard: [
             [
-                { text: 'View on SuiScan', url: `${suiscan_account}/`}
+                { text: 'View on SuiScan', url: `${suiscan_account}/` }
             ],
             [
                 { text: 'Back', callback_data: TelegramCallbackData.BACK_TO_MENU }
@@ -63,41 +65,68 @@ const wallet_menu_buttons = {
     }
 };
 
-const wallets: Record<string, string> = {};
-var keypair: Ed25519Keypair;
+bot.onText(/\/start (.+)/, async (msg: Message, match) => {
+    // extract userId (sender)
+    const userId = msg.from?.id;
+    var keypair: Ed25519Keypair;
 
-bot.onText(/\/start/, async (msg: Message) => {
-    const id = msg.chat.id;
+    // check new user
+    if (userId) {
+        // extract reference link
+        const referralCode = match ? match[1] : null;
+        var referralId = undefined
 
-    // create wallet for new user
-    if (wallets[id] === undefined) {
-        keypair = await createSuiWallet();
-    } else {
-        keypair = Ed25519Keypair.fromSecretKey(wallets[id]);
-    }
-    const walletAddress = keypair.toSuiAddress();
-    const sui = await suiClient.getBalance({owner: keypair.toSuiAddress()})
-    // Send welcome message with wallet address
-    const suiToUSD = await convertSuiToUSD(Number(sui.totalBalance))
-    
-    if (sui.totalBalance === '0') {
+        if (referralCode) {
+            // get user by referralCode (reference link = PREFIX + referralCode)
+            const referrerUser = await UserRepo.findByReferralCode(referralCode)
+            referralId = referrerUser?.userId
+        }
+
+        // check new user
+        const user = await UserRepo.findByUserId(String(userId))
+
+        if (!user) {
+            // create new wallet for new user
+            keypair = await createSuiWallet();
+
+            // save new user to database
+            const createdUser = await UserRepo.create({
+                userId: String(userId),
+                publicKey: keypair.getPublicKey().toString(),
+                privateKey: keypair.getSecretKey().toString(),
+                referenceCode: referralCode ? String(referralCode) : undefined,
+                referralId: referralId ? referralId : undefined
+            } as User);
+
+        } else {
+            // get private key for existed user
+            keypair = Ed25519Keypair.fromSecretKey(user.privateKey);
+        }
+
+        const walletAddress = keypair.toSuiAddress();
+        const sui = await suiClient.getBalance({ owner: keypair.toSuiAddress() })
+        // Send welcome message with wallet address
+        const suiToUSD = await convertSuiToUSD(Number(sui.totalBalance))
+
+        if (sui.totalBalance === '0') {
+            await bot.sendMessage(
+                msg.chat.id,
+                `<b>Welcome to FISH BOT.</b> \n\nYou currently have no SUI balance. Please deposit more funds to your FISH BOT wallet:\n\n<code>${walletAddress}</code> (Tap to copy)\n\nPower by CATFISH`, { parse_mode: "HTML" }
+            );
+        } else {
+            await bot.sendMessage(
+                msg.chat.id,
+                `Sui's fastest bot to trade coins, and FISH BOT's official Telegram trading bot. \n\nYour current SUI balance is: <code>${sui.totalBalance} SUI</code> ($ ${suiToUSD})\n\nFISH BOT wallet: \n\n<code>${walletAddress} (Tap to copy)`, { parse_mode: "HTML" }
+            );
+        }
+
+        // Send message with menu buttons
         await bot.sendMessage(
             msg.chat.id,
-            `<b>Welcome to FISH BOT.</b> \n\nYou currently have no SUI balance. Please deposit more funds to your FISH BOT wallet:\n\n<code>${walletAddress}</code> (Tap to copy)\n\nPower by CATFISH`, {parse_mode: "HTML"}
-        );
-    } else {
-        await bot.sendMessage(
-            msg.chat.id,
-            `Sui's fastest bot to trade coins, and FISH BOT's official Telegram trading bot. \n\nYour current SUI balance is: <code>${sui.totalBalance} SUI</code> ($ ${suiToUSD})\n\nFISH BOT wallet: \n\n<code>${walletAddress} (Tap to copy)`, {parse_mode: "HTML"}
+            "What do you want to do with the bot?",
+            general_menu_buttons
         );
     }
-
-    // Send message with menu buttons
-    await bot.sendMessage(
-        msg.chat.id,
-        "What do you want to do with the bot?",
-        general_menu_buttons
-    );
 });
 
 // Button events
